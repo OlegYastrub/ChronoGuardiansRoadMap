@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chrono Guardians — Полное управление</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #FF0000;
+    --black: #000000;
+    --white: #FFFFFF;
+    --dark-bg: #121212;
+    --dark-card: #1E1E1E;
+    --dark-text: #E0E0E0;
+    --dark-border: #333333;
+    --muted: #A9A9A9;
+    --ok: #2ecc71;
+    --warn: #f1c40f;
+    --bad: #e74c3c;
+    --info: #3498db;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  body {
+    font-family: 'Roboto', sans-serif;
+    color: var(--dark-text);
+    background-color: var(--dark-bg);
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+  h1,h2,h3,h4 { font-family:'Montserrat',sans-serif; font-weight:700; color:var(--white); }
+  a { text-decoration:none; color:var(--primary); transition:0.2s; }
+
+  /* ============================================================
+     HEADER
+  ============================================================ */
+  header {
+    background-color: var(--dark-card);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    border-bottom: 1px solid var(--dark-border);
+  }
+  .header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    gap: 16px;
+  }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo img { height:38px; }
+  .logo-text {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--primary);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+  .logo-text small {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .header-right { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .header-tabs  { display:flex; gap:6px; flex-wrap:wrap; }
+
+  .tab-btn {
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--dark-border);
+    background: rgba(0,0,0,0.22);
+    color: var(--muted);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover  { border-color:rgba(255,0,0,0.4); color:var(--white); }
+  .tab-btn.active { background:rgba(255,0,0,0.12); border-color:rgba(255,0,0,0.55); color:var(--white); }
+
+  .mobile-menu { display:none; font-size:1.6rem; cursor:pointer; color:var(--white); user-select:none; }
+
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    top: 68px; left: 0;
+    width: 100%;
+    background: var(--dark-card);
+    border-top: 1px solid var(--dark-border);
+    z-index: 98;
+    padding: 16px 20px 20px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mobile-nav.open { display:flex; }
+  .mobile-nav .tab-btn { width:100%; text-align:left; border-radius:10px; }
+
+  /* ============================================================
+     MAIN
+  ============================================================ */
+  .page { max-width:1400px; margin:0 auto; padding:90px 24px 80px; }
+  .hidden { display:none !important; }
+
+  /* ============================================================
+     LOADING STATE
+  ============================================================ */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: var(--dark-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    gap: 16px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(255,0,0,0.15);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { color: var(--muted); font-family:'Montserrat',sans-serif; font-size:0.9rem; }
+
+  #error-msg {
+    display: none;
+    max-width: 500px;
+    margin: 120px auto 0;
+    padding: 20px 24px;
+    background: rgba(231,76,60,0.08);
+    border: 1px solid rgba(231,76,60,0.35);
+    border-radius: 14px;
+    color: var(--bad);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.92rem;
+    text-align: center;
+  }
+
+  /* ============================================================
+     HERO
+  ============================================================ */
+  .hero-card {
+    background: linear-gradient(135deg, rgba(255,0,0,0.09), rgba(0,0,0,0));
+    border: 1px solid rgba(255,0,0,0.22);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+  }
+  .hero-card h1 { font-size:2rem; margin-bottom:6px; }
+  .hero-card p  { color:var(--muted); font-size:0.97rem; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+  .leg    { display:flex; align-items:center; gap:7px; font-size:0.88rem; }
+  .leg-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .leg-dot.planned { background:#555; }
+  .leg-dot.active  { background:var(--warn); box-shadow:0 0 6px var(--warn); }
+  .leg-dot.done    { background:var(--ok); }
+  .leg-dot.blocked { background:var(--bad); }
+  .leg-dot.waiting { background:var(--info); }
+
+  /* ============================================================
+     STATS
+  ============================================================ */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--dark-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-num { font-family:'Montserrat',sans-serif; font-weight:800; font-size:2rem; color:var(--white); line-height:1; margin-bottom:4px; }
+  .stat-num.yellow { color:var(--warn); }
+  .stat-num.green  { color:var(--ok); }
+  .stat-label { font-size:0.78rem; color:var(--muted); font-family:'Montserrat',sans-serif; }
+
+  /* ============================================================
+     OVERVIEW TABLE
+  ============================================================ */
+  .section-title {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--dark-border); }
+
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--dark-border);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.18);
+  }
+  table.ov { width:100%; border-collapse:collapse; min-width:700px; }
+  table.ov th, table.ov td { padding:11px 14px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; font-size:0.9rem; }
+  table.ov th { font-family:'Montserrat',sans-serif; font-weight:700; color:var(--white); background:rgba(0,0,0,0.3); font-size:0.82rem; white-space:nowrap; }
+  table.ov tr:last-child td { border-bottom:none; }
+  table.ov tr:hover td { background:rgba(255,255,255,0.02); }
+
+  .ov-role { display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.78rem; font-family:'Montserrat',sans-serif; font-weight:600; white-space:nowrap; }
+  .ov-role.art  { background:rgba(149,97,255,0.12); color:#b28eff; }
+  .ov-role.anim { background:rgba(46,204,113,0.1);  color:#2ecc71; }
+  .ov-role.prog { background:rgba(52,152,219,0.1);  color:#3498db; }
+
+  .ov-status { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:0.78rem; font-family:'Montserrat',sans-serif; font-weight:700; white-space:nowrap; border:1px solid; }
+  .ov-status.planned { background:rgba(255,255,255,0.04); border-color:#444; color:#666; }
+  .ov-status.active  { background:rgba(241,196,15,0.1);   border-color:rgba(241,196,15,0.4); color:var(--warn); }
+  .ov-status.done    { background:rgba(46,204,113,0.08);  border-color:rgba(46,204,113,0.35); color:var(--ok); }
+  .ov-status.blocked { background:rgba(231,76,60,0.08);   border-color:rgba(231,76,60,0.35); color:var(--bad); }
+  .ov-status.waiting { background:rgba(52,152,219,0.08);  border-color:rgba(52,152,219,0.35); color:var(--info); }
+
+  .progress-bar-wrap { background:rgba(255,255,255,0.06); border-radius:999px; height:6px; width:100%; margin-top:20px; overflow:hidden; }
+  .progress-bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--primary),#ff6b35); transition:width 0.5s ease; }
+  .progress-label { font-size:0.82rem; color:var(--muted); margin-top:6px; text-align:right; }
+
+  /* ============================================================
+     PIPELINE
+  ============================================================ */
+  .pipeline-label { font-family:'Montserrat',sans-serif; font-weight:700; font-size:0.8rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; padding-left:2px; }
+  .pipeline-role-title { display:flex; align-items:center; gap:10px; margin-bottom:16px; justify-content: space-between; flex-wrap:wrap; }
+  .role-badge { padding:6px 14px; border-radius:999px; font-family:'Montserrat',sans-serif; font-weight:700; font-size:0.92rem; border:1.5px solid; }
+  .role-badge.art  { background:rgba(149,97,255,0.12); border-color:rgba(149,97,255,0.45); color:#b28eff; }
+  .role-badge.anim { background:rgba(46,204,113,0.08); border-color:rgba(46,204,113,0.35); color:#2ecc71; }
+  .role-badge.prog { background:rgba(52,152,219,0.08); border-color:rgba(52,152,219,0.35); color:#3498db; }
+
+  .pipeline-row { display:flex; align-items:flex-start; gap:0; overflow-x:auto; padding-bottom:10px; -webkit-overflow-scrolling:touch; }
+  .pipeline-row::-webkit-scrollbar { height:4px; }
+  .pipeline-row::-webkit-scrollbar-track { background:rgba(255,255,255,0.04); border-radius:2px; }
+  .pipeline-row::-webkit-scrollbar-thumb { background:rgba(255,0,0,0.3); border-radius:2px; }
+
+  /* ============================================================
+     TASK CARDS
+  ============================================================ */
+  .task-card { min-width:230px; max-width:260px; flex-shrink:0; border-radius:14px; border:1.5px solid var(--dark-border); background:var(--dark-card); padding:14px; position:relative; overflow:hidden; }
+  .task-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:14px 14px 0 0; transition:background 0.3s; }
+  .task-card[data-status="planned"]::before { background:#444; }
+  .task-card[data-status="active"]::before  { background:var(--warn); }
+  .task-card[data-status="done"]::before    { background:var(--ok); }
+  .task-card[data-status="blocked"]::before { background:var(--bad); }
+  .task-card[data-status="waiting"]::before { background:var(--info); }
+
+  .card-date { font-size:0.78rem; color:var(--muted); margin-bottom:7px; display:flex; gap:6px; align-items:center; }
+  .card-date-days { padding:1px 6px; border-radius:999px; background:rgba(255,255,255,0.06); font-size:0.75rem; color:#666; }
+  .card-title { font-family:'Montserrat',sans-serif; font-weight:700; font-size:0.92rem; color:var(--white); margin-bottom:10px; line-height:1.35; }
+  .card-items { list-style:none; padding:0; margin-bottom:10px; }
+  .card-items li { font-size:0.8rem; color:var(--muted); padding-left:12px; position:relative; line-height:1.55; margin-bottom:2px; }
+  .card-items li::before { content:'·'; position:absolute; left:2px; color:#555; font-size:1rem; line-height:1.3; }
+  .card-transfer { font-size:0.76rem; color:var(--primary); background:rgba(255,0,0,0.07); border:1px solid rgba(255,0,0,0.2); border-radius:8px; padding:5px 8px; margin-top:6px; }
+
+  .status-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-family:'Montserrat',sans-serif; font-weight:700; font-size:0.72rem; letter-spacing:0.3px; margin-bottom:8px; border:1px solid; }
+  .status-badge.planned { background:rgba(255,255,255,0.04); border-color:#444; color:#666; }
+  .status-badge.active  { background:rgba(241,196,15,0.1);   border-color:rgba(241,196,15,0.4); color:var(--warn); }
+  .status-badge.done    { background:rgba(46,204,113,0.08);  border-color:rgba(46,204,113,0.35); color:var(--ok); }
+  .status-badge.blocked { background:rgba(231,76,60,0.08);   border-color:rgba(231,76,60,0.35); color:var(--bad); }
+  .status-badge.waiting { background:rgba(52,152,219,0.08);  border-color:rgba(52,152,219,0.35); color:var(--info); }
+  .status-badge.active .dot { width:6px; height:6px; border-radius:50%; background:var(--warn); animation:pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  .arrow-connector { display:flex; align-items:center; padding:0 4px; flex-shrink:0; margin-top:32px; }
+  .arrow-line { width:24px; height:2px; background:linear-gradient(90deg,#333,#555); }
+  .arrow-head { width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:7px solid #555; }
+
+  /* ============================================================
+     IMPROVEMENTS (оригинальный дизайн)
+  ============================================================ */
+  .improv-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:16px; }
+  .improv-card { border:1px solid var(--dark-border); border-radius:14px; background:rgba(0,0,0,0.2); overflow:hidden; }
+  .improv-head { padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:10px; justify-content: space-between; }
+  .improv-left { display: flex; align-items: center; gap: 10px; }
+  .improv-icon { font-size:1.3rem; line-height:1; }
+  .improv-head-title { font-family:'Montserrat',sans-serif; font-weight:700; font-size:0.95rem; color:var(--white); }
+  .improv-body { padding:12px 16px; }
+  .improv-item { display:flex; align-items:baseline; gap:8px; font-size:0.87rem; color:var(--muted); padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .improv-item:last-child { border-bottom:none; }
+  .improv-item::before { content:'○'; font-size:0.65rem; color:#444; flex-shrink:0; line-height:1.8; }
+
+  /* Кнопки действий */
+  .action-buttons { display: flex; gap: 6px; }
+  .icon-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 6px; transition: 0.2s; }
+  .icon-btn:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .delete-btn:hover { color: var(--bad); }
+  .edit-btn:hover { color: var(--info); }
+  .add-btn { background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 30px; font-weight: 600; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px; }
+  .add-btn:hover { opacity: 0.9; }
+
+  /* Модальные окна */
+  .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: 0.2s; backdrop-filter: blur(4px); }
+  .modal.active { visibility: visible; opacity: 1; }
+  .modal-content { background: var(--dark-card); border-radius: 24px; width: 90%; max-width: 550px; padding: 24px; border: 1px solid var(--dark-border); max-height: 85vh; overflow-y: auto; }
+  .modal-content h3 { margin-bottom: 20px; }
+  .modal-content input, .modal-content textarea, .modal-content select { width: 100%; background: #2a2a2a; border: 1px solid var(--dark-border); padding: 10px 14px; border-radius: 12px; color: white; margin-bottom: 14px; font-family: 'Roboto', sans-serif; }
+  .modal-content textarea { min-height: 80px; resize: vertical; }
+  .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+  .modal-buttons button { padding: 8px 20px; border-radius: 40px; border: none; cursor: pointer; font-weight: 600; }
+  .save-btn { background: var(--ok); color: black; }
+  .cancel-btn { background: #333; color: white; }
+
+  @media (max-width: 900px) {
+    #desktopTabs  { display:none; }
+    .mobile-menu  { display:block; }
+    .page         { padding:80px 16px 60px; }
+    .hero-card h1 { font-size:1.5rem; }
+    .stats-row    { grid-template-columns:repeat(2,1fr); }
+  }
+  @media (min-width: 901px) {
+    .mobile-menu { display:none; }
+    .mobile-nav  { display:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>Загрузка данных из Firebase…</p></div>
+<div id="error-msg"></div>
+
+<header>
+  <div class="header-container">
+    <div class="logo">
+      <img src="Logo/Logo.png" alt="Flying Yastrub Studio Logo" onerror="this.style.display='none'">
+      <div class="logo-text">FLYING YASTRUB STUDIO<small id="logo-project">Проект: Загрузка...</small></div>
+    </div>
+    <div class="header-right">
+      <div class="header-tabs" id="desktopTabs">
+        <button class="tab-btn active" data-tab="overview">📊 Общий план</button>
+        <button class="tab-btn" data-tab="art">🎨 2D Художник</button>
+        <button class="tab-btn" data-tab="anim">✨ 2D Аниматор</button>
+        <button class="tab-btn" data-tab="prog">💻 Программист</button>
+        <button class="tab-btn" data-tab="improv">📋 Список улучшений</button>
+      </div>
+      <div class="mobile-menu" id="mobileMenu">☰</div>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-nav" id="mobileNav"></div>
+
+<div class="page" id="app" style="display:none">
+  <div class="hero-card">
+    <h1>🕐 Дорожная карта улучшений</h1>
+    <p>Старт: <strong id="hero-start" style="color:var(--white)"></strong> &nbsp;·&nbsp; Добавляй, редактируй и удаляй задачи</p>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot planned"></div> Запланировано</div>
+      <div class="leg"><div class="leg-dot active"></div> В работе</div>
+      <div class="leg"><div class="leg-dot done"></div> Реализовано</div>
+      <div class="leg"><div class="leg-dot blocked"></div> Заблокировано</div>
+      <div class="leg"><div class="leg-dot waiting"></div> Ожидание ассетов</div>
+    </div>
+  </div>
+
+  <div id="tab-overview">
+    <div class="stats-row" id="stats-row"></div>
+    <div class="section-title"><span>Все задачи</span><button class="add-btn" onclick="openTaskModal()">+ Добавить задачу</button></div>
+    <div class="table-wrap">
+      <table class="ov"><thead><tr><th>Роль</th><th>Даты</th><th>Задача</th><th>Статус</th><th>Дней</th><th></th></tr></thead><tbody id="overview-tbody"></tbody></table>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="main-progress"></div></div>
+    <div class="progress-label" id="progress-label"></div>
+  </div>
+
+  <div id="tab-art" class="hidden"><div class="pipeline-role-title"><span class="role-badge art">🎨 2D Художник</span><button class="add-btn" onclick="openTaskModal('art')">+ Добавить задачу</button></div><div class="pipeline-label">Хронологический пайплайн — прокрути вправо →</div><div class="pipeline-row" id="pipeline-art"></div></div>
+  <div id="tab-anim" class="hidden"><div class="pipeline-role-title"><span class="role-badge anim">✨ 2D Аниматор</span><button class="add-btn" onclick="openTaskModal('anim')">+ Добавить задачу</button></div><div class="pipeline-label">Хронологический пайплайн — прокрути вправо →</div><div class="pipeline-row" id="pipeline-anim"></div></div>
+  <div id="tab-prog" class="hidden"><div class="pipeline-role-title"><span class="role-badge prog">💻 Unity Программист</span><button class="add-btn" onclick="openTaskModal('prog')">+ Добавить задачу</button></div><div class="pipeline-label">Хронологический пайплайн — прокрути вправо →</div><div class="pipeline-row" id="pipeline-prog"></div></div>
+
+  <div id="tab-improv" class="hidden">
+    <div class="section-title"><span>📋 Список всех улучшений</span><button class="add-btn" onclick="openImprovementModal()">+ Добавить категорию</button></div>
+    <div class="improv-grid" id="improv-grid"></div>
+  </div>
+</div>
+
+<!-- Модальное окно для задач -->
+<div id="taskModal" class="modal"><div class="modal-content"><h3 id="taskModalTitle">Добавить задачу</h3><input type="text" id="taskTitle" placeholder="Название задачи"><select id="taskRole"><option value="art">🎨 2D Художник</option><option value="anim">✨ 2D Аниматор</option><option value="prog">💻 Программист</option></select><input type="text" id="taskDate" placeholder="Дата (например, 15 мая)"><input type="text" id="taskDays" placeholder="Дней"><select id="taskStatus"><option value="planned">Запланировано</option><option value="active">В работе</option><option value="done">Реализовано</option><option value="blocked">Заблокировано</option><option value="waiting">Ожидание</option></select><textarea id="taskItems" placeholder="Подзадачи (каждая с новой строки)"></textarea><textarea id="taskTransfer" placeholder="Дополнительно / Transfer"></textarea><div class="modal-buttons"><button class="cancel-btn" onclick="closeTaskModal()">Отмена</button><button class="save-btn" onclick="saveTask()">Сохранить</button></div></div></div>
+
+<!-- Модальное окно для улучшений -->
+<div id="improvementModal" class="modal"><div class="modal-content"><h3 id="impModalTitle">Добавить категорию</h3><input type="text" id="impIcon" placeholder="Иконка (например, 🎮)"><input type="text" id="impTitle" placeholder="Название категории"><textarea id="impItems" placeholder="Пункты улучшений (каждый с новой строки)"></textarea><div class="modal-buttons"><button class="cancel-btn" onclick="closeImprovementModal()">Отмена</button><button class="save-btn" onclick="saveImprovement()">Сохранить</button></div></div></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+  import { getDatabase, ref, get, update, set } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+  const firebaseConfig = { apiKey: "AIzaSyBdmVkSN0gqAEuHpg43K_8B12P-DuH2bnw", authDomain: "chronoroadmap.firebaseapp.com", databaseURL: "https://chronoroadmap-default-rtdb.firebaseio.com", projectId: "chronoroadmap", storageBucket: "chronoroadmap.firebasestorage.app", messagingSenderId: "687990224660", appId: "1:687990224660:web:70c88600b9e51a3967b401" };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  let globalData = { meta: {}, roles: [], tasks: { art: [], anim: [], prog: [] }, improvements: [] };
+  let currentEditTask = null; // { roleKey, index }
+  let currentEditImprovement = null;
+
+  const STATUS_LABELS = { planned:'Запланировано', active:'В работе', done:'Реализовано', blocked:'Заблокировано', waiting:'Ожидание' };
+  const STATUS_ICONS = { planned:'○', active:'◉', done:'✓', blocked:'✕', waiting:'⏳' };
+  const ROLE_LABELS = { art:'🎨 Художник', anim:'✨ Аниматор', prog:'💻 Программист' };
+  const ROLE_CLS = { art:'art', anim:'anim', prog:'prog' };
+
+  function toArray(val) { if (!val) return []; if (Array.isArray(val)) return val; return Object.keys(val).sort((a,b)=>Number(a)-Number(b)).map(k=>val[k]); }
+  function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m=> m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
+
+  async function loadData() {
+    const snapshot = await get(ref(db, '/'));
+    if (!snapshot.exists()) throw new Error('База данных пуста');
+    const raw = snapshot.val();
+    globalData.meta = raw.meta || {};
+    globalData.roles = toArray(raw.roles);
+    globalData.improvements = toArray(raw.improvements).map(c => ({ ...c, items: toArray(c.items) }));
+    if (raw.tasks) for (let key of ['art','anim','prog']) globalData.tasks[key] = toArray(raw.tasks[key]).map(t => ({ ...t, items: toArray(t.items) }));
+    renderAll();
+  }
+
+  async function saveTasks(role) { await update(ref(db), { [`tasks/${role}`]: globalData.tasks[role] }); }
+  async function saveImprovements() { await set(ref(db, 'improvements'), globalData.improvements); }
+
+  window.saveTask = async function() {
+    const title = document.getElementById('taskTitle').value.trim();
+    if (!title) { alert("Введите название"); return; }
+    const task = { title, role: document.getElementById('taskRole').value, date: document.getElementById('taskDate').value, days: document.getElementById('taskDays').value, status: document.getElementById('taskStatus').value, items: document.getElementById('taskItems').value.split(/\r?\n/).filter(i=>i.trim()), transfer: document.getElementById('taskTransfer').value };
+    if (currentEditTask) { globalData.tasks[currentEditTask.roleKey][currentEditTask.index] = task; await saveTasks(currentEditTask.roleKey); }
+    else { globalData.tasks[task.role].push(task); await saveTasks(task.role); }
+    closeTaskModal(); renderAll();
+  };
+
+  window.openTaskModal = function(role=null) {
+    currentEditTask = null;
+    document.getElementById('taskModalTitle').innerText = "➕ Добавить задачу";
+    document.getElementById('taskTitle').value = ""; document.getElementById('taskDate').value = ""; document.getElementById('taskDays').value = ""; document.getElementById('taskItems').value = ""; document.getElementById('taskTransfer').value = ""; document.getElementById('taskStatus').value = "planned";
+    if (role) document.getElementById('taskRole').value = role;
+    document.getElementById('taskModal').classList.add('active');
+  };
+
+  window.editTask = function(roleKey, index) { currentEditTask = { roleKey, index }; const t = globalData.tasks[roleKey][index]; document.getElementById('taskModalTitle').innerText = "✏️ Редактировать"; document.getElementById('taskTitle').value = t.title||''; document.getElementById('taskRole').value = roleKey; document.getElementById('taskDate').value = t.date||''; document.getElementById('taskDays').value = t.days||''; document.getElementById('taskStatus').value = t.status||'planned'; document.getElementById('taskItems').value = (t.items||[]).join("\n"); document.getElementById('taskTransfer').value = t.transfer||''; document.getElementById('taskModal').classList.add('active'); };
+
+  window.deleteTask = async function(roleKey, index) { if(confirm("Удалить задачу?")){ globalData.tasks[roleKey].splice(index,1); await saveTasks(roleKey); renderAll(); } };
+
+  window.closeTaskModal = function() { document.getElementById('taskModal').classList.remove('active'); currentEditTask = null; };
+
+  window.openImprovementModal = function(idx=null) { currentEditImprovement = idx; if(idx!==null){ let c=globalData.improvements[idx]; document.getElementById('impModalTitle').innerText="✏️ Редактировать"; document.getElementById('impIcon').value=c.icon||''; document.getElementById('impTitle').value=c.title||''; document.getElementById('impItems').value=(c.items||[]).join("\n"); } else { document.getElementById('impModalTitle').innerText="➕ Добавить категорию"; document.getElementById('impIcon').value=""; document.getElementById('impTitle').value=""; document.getElementById('impItems').value=""; } document.getElementById('improvementModal').classList.add('active'); };
+
+  window.saveImprovement = async function() { const title=document.getElementById('impTitle').value.trim(); if(!title){alert("Введите название");return;} const cat={ icon:document.getElementById('impIcon').value.trim()||"📋", title, items:document.getElementById('impItems').value.split(/\r?\n/).filter(i=>i.trim()) }; if(currentEditImprovement!==null) globalData.improvements[currentEditImprovement]=cat; else globalData.improvements.push(cat); await saveImprovements(); closeImprovementModal(); renderAll(); };
+
+  window.deleteImprovement = async function(idx) { if(confirm("Удалить категорию?")){ globalData.improvements.splice(idx,1); await saveImprovements(); renderAll(); } };
+
+  window.closeImprovementModal = function() { document.getElementById('improvementModal').classList.remove('active'); currentEditImprovement=null; };
+
+function buildPipeline(containerId, tasks, roleKey) {
+    const container = document.getElementById(containerId); 
+    container.innerHTML = '';
+    tasks.forEach((t, i) => {
+      if(i>0){ const a=document.createElement('div'); a.className='arrow-connector'; a.innerHTML='<div class="arrow-line"></div><div class="arrow-head"></div>'; container.appendChild(a); }
+      const card = document.createElement('div'); card.className='task-card'; card.setAttribute('data-status',t.status||'planned');
+      
+      // Исправление: преобразуем переносы строк в <br> для корректного отображения
+      const transferHtml = t.transfer ? t.transfer.replace(/\n/g, '<br>') : '';
+      
+      card.innerHTML = `<div class="status-badge ${t.status||'planned'}">${t.status==='active'?'<span class="dot"></span>':''}${STATUS_ICONS[t.status]||'○'} ${STATUS_LABELS[t.status]||t.status}</div><div class="card-date"><span>${t.date||''}</span><span class="card-date-days">${t.days||''}</span></div><div class="card-title">${escapeHtml(t.title)}</div><ul class="card-items">${(t.items||[]).map(it=>`<li>${escapeHtml(it)}</li>`).join('')}</ul>${transferHtml ? `<div class="card-transfer">${transferHtml}</div>` : ''}<div class="action-buttons" style="justify-content:flex-end; margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);"><button class="icon-btn edit-btn" onclick="window.editTask('${roleKey}',${i})">✏️</button><button class="icon-btn delete-btn" onclick="window.deleteTask('${roleKey}',${i})">🗑️</button></div>`;
+      container.appendChild(card);
+    });
+}
+  function buildOverview() {
+    const tbody = document.getElementById('overview-tbody'); tbody.innerHTML=''; let total=0,done=0,active=0, allTasks=[];
+    const monthMap={'янв':0,'фев':1,'мар':2,'апр':3,'мая':4,'июн':5,'июл':6,'авг':7,'сен':8,'окт':9,'ноя':10,'дек':11};
+    for(let rk of ['art','anim','prog']) (globalData.tasks[rk]||[]).forEach((t,idx)=>{ total++; if(t.status==='done') done++; if(t.status==='active') active++; allTasks.push({...t,roleKey:rk,idx,roleCls:ROLE_CLS[rk]}); });
+    allTasks.sort((a,b)=>{ let p=s=>{ let m=(s||'').toLowerCase().match(/(\d+)\s+([а-я]+)/); if(!m) return 9999; return (monthMap[m[2].substring(0,3)]||0)*100+parseInt(m[1]); }; return p(a.date)-p(b.date); });
+    allTasks.forEach(t=>{ let tr=document.createElement('tr'); tr.innerHTML=`<td><span class="ov-role ${t.roleCls}">${ROLE_LABELS[t.roleKey]}</span></td><td style="white-space:nowrap">${t.date||''}</td><td style="font-weight:600">${escapeHtml(t.title)}</td><td><span class="ov-status ${t.status||'planned'}">${STATUS_ICONS[t.status]||'○'} ${STATUS_LABELS[t.status]||t.status}</span></td><td>${t.days||''}</td><td><div class="action-buttons"><button class="icon-btn edit-btn" onclick="window.editTask('${t.roleKey}',${t.idx})">✏️</button><button class="icon-btn delete-btn" onclick="window.deleteTask('${t.roleKey}',${t.idx})">🗑️</button></div></td>`; tbody.appendChild(tr); });
+    document.getElementById('stats-row').innerHTML=`<div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Всего задач</div></div><div class="stat-card"><div class="stat-num yellow">${active}</div><div class="stat-label">В работе</div></div><div class="stat-card"><div class="stat-num green">${done}</div><div class="stat-label">Реализовано</div></div><div class="stat-card"><div class="stat-num" style="color:var(--muted)">${total-done-active}</div><div class="stat-label">Запланировано</div></div>`;
+    let pct=total>0?Math.round(done/total*100):0; document.getElementById('main-progress').style.width=pct+'%'; document.getElementById('progress-label').textContent=`${done} из ${total} задач завершено — ${pct}%`;
+  }
+
+  function buildImprovements() {
+    const grid = document.getElementById('improv-grid'); grid.innerHTML='';
+    globalData.improvements.forEach((cat,idx)=>{ let items=(cat.items||[]).map(it=>`<div class="improv-item">${escapeHtml(it)}</div>`).join(''); let card=document.createElement('div'); card.className='improv-card'; card.innerHTML=`<div class="improv-head"><div class="improv-left"><div class="improv-icon">${escapeHtml(cat.icon||'📋')}</div><div class="improv-head-title">${escapeHtml(cat.title)}</div></div><div class="action-buttons"><button class="icon-btn edit-btn" onclick="window.openImprovementModal(${idx})">✏️</button><button class="icon-btn delete-btn" onclick="window.deleteImprovement(${idx})">🗑️</button></div></div><div class="improv-body">${items}</div>`; grid.appendChild(card); });
+  }
+
+  function renderMeta() { document.getElementById('logo-project').textContent = 'Проект: '+(globalData.meta.project||''); document.getElementById('hero-start').textContent = globalData.meta.startDate||''; }
+  function renderAll() { renderMeta(); buildPipeline('pipeline-art', globalData.tasks.art, 'art'); buildPipeline('pipeline-anim', globalData.tasks.anim, 'anim'); buildPipeline('pipeline-prog', globalData.tasks.prog, 'prog'); buildOverview(); buildImprovements(); document.getElementById('loading').style.display='none'; document.getElementById('app').style.display='block'; }
+
+  loadData().catch(e=>{ document.getElementById('loading').innerHTML=`<p style="color:red">Ошибка: ${e.message}</p>`; });
+</script>
+
+<script>
+  function showTab(name) { ['overview','art','anim','prog','improv'].forEach(t=>document.getElementById('tab-'+t).classList.add('hidden')); document.getElementById('tab-'+name).classList.remove('hidden'); document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active')); document.querySelector(`.tab-btn[data-tab="${name}"]`)?.classList.add('active'); }
+  document.getElementById('mobileMenu').addEventListener('click',()=>document.getElementById('mobileNav').classList.toggle('open'));
+  window.closeMobile = () => document.getElementById('mobileNav').classList.remove('open');
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn=>btn.addEventListener('click',()=>showTab(btn.dataset.tab)));
+  showTab('overview');
+  window.showTab = showTab;
+</script>
+</body>
+</html>
