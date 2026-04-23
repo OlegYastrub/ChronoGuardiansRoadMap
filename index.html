@@ -328,14 +328,14 @@
 <!-- Loading overlay -->
 <div id="loading">
   <div class="spinner"></div>
-  <p>Загрузка данных…</p>
+  <p>Загрузка данных из Firebase…</p>
 </div>
 
 <!-- Error state -->
 <div id="error-msg"></div>
 
 <!-- ============================================================
-     HEADER (populated from JSON meta)
+     HEADER
 ============================================================ -->
 <header>
   <div class="header-container">
@@ -444,253 +444,270 @@
 
 </div><!-- /app -->
 
-<script>
-// ============================================================
-//  CONSTANTS
-// ============================================================
-const DATA_FILE = 'roadmap.json';
+<!-- ============================================================
+     FIREBASE SDK (модульный, v12)
+============================================================ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 
-const STATUS_LABELS = {
-  planned: 'Запланировано',
-  active:  'В работе',
-  done:    'Реализовано',
-  blocked: 'Заблокировано',
-  waiting: 'Ожидание'
-};
-const STATUS_ICONS = {
-  planned: '○', active: '◉', done: '✓', blocked: '✕', waiting: '⏳'
-};
-const ROLE_LABELS = {
-  art:  '🎨 Художник',
-  anim: '✨ Аниматор',
-  prog: '💻 Программист'
-};
-
-// ============================================================
-//  FETCH JSON
-// ============================================================
-async function loadData() {
-  try {
-    const res = await fetch(DATA_FILE + '?_=' + Date.now()); // cache bust
-    if (!res.ok) throw new Error(`HTTP ${res.status} — файл не найден`);
-    return await res.json();
-  } catch (err) {
-    showError(err.message);
-    return null;
-  }
-}
-
-function showError(msg) {
-  document.getElementById('loading').style.display = 'none';
-  const el = document.getElementById('error-msg');
-  el.style.display = 'block';
-  el.innerHTML = `
-    ⚠️ Не удалось загрузить данные<br>
-    <code>${msg}</code><br><br>
-    Убедитесь что <strong>roadmap.json</strong> лежит рядом с index.html
-    и страница открыта через веб-сервер (не file://).
-  `;
-}
-
-// ============================================================
-//  RENDER META
-// ============================================================
-function renderMeta(meta) {
-  document.title = `${meta.project} — Улучшения`;
-  document.getElementById('logo-project').textContent = 'Проект: ' + meta.project;
-  document.getElementById('hero-start').textContent = meta.startDate;
-}
-
-// ============================================================
-//  RENDER PIPELINE CARDS (Поддержка многострочного transfer)
-// ============================================================
-function buildPipeline(containerId, tasks) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = '';
-  tasks.forEach((t, i) => {
-    if (i > 0) {
-      const arrow = document.createElement('div');
-      arrow.className = 'arrow-connector';
-      arrow.innerHTML = '<div class="arrow-line"></div><div class="arrow-head"></div>';
-      container.appendChild(arrow);
-    }
-    const card = document.createElement('div');
-    card.className = 'task-card';
-    card.setAttribute('data-status', t.status);
-
-    const dotHtml = t.status === 'active' ? '<span class="dot"></span>' : '';
-    
-    // ОБРАБОТКА TRANSFER: заменяем \n на <br> для отображения списка
-    const formattedTransfer = t.transfer ? t.transfer.replace(/\n/g, '<br>') : '';
-    const transferHtml = formattedTransfer ? `<div class="card-transfer">${formattedTransfer}</div>` : '';
-    
-    const itemsHtml = (t.items || []).map(it => `<li>${it}</li>`).join('');
-
-    card.innerHTML = `
-      <div class="status-badge ${t.status}">${dotHtml}${STATUS_ICONS[t.status]} ${STATUS_LABELS[t.status]}</div>
-      <div class="card-date">
-        <span>${t.date}</span>
-        <span class="card-date-days">${t.days}</span>
-      </div>
-      <div class="card-title">${t.title}</div>
-      <ul class="card-items">${itemsHtml}</ul>
-      ${transferHtml}
-    `;
-    container.appendChild(card);
-  });
-}
-// ============================================================
-//  RENDER OVERVIEW TABLE + STATS (С УМНОЙ СОРТИРОВКОЙ)
-// ============================================================
-function buildOverview(roles, tasks) {
-  const tbody = document.getElementById('overview-tbody');
-  tbody.innerHTML = '';
-
-  let total = 0, done = 0, active = 0;
-  let allTasksFlattened = [];
-
-  // Словарь для перевода месяцев в числа для сортировки
-  const monthMap = {
-    'янв': 0, 'фев': 1, 'мар': 2, 'апр': 3, 'мая': 4, 'июн': 5,
-    'июл': 6, 'авг': 7, 'сен': 8, 'окт': 9, 'ноя': 10, 'дек': 11
+  // ── Firebase config ──────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyBdmVkSN0gqAEuHpg43K_8B12P-DuH2bnw",
+    authDomain: "chronoroadmap.firebaseapp.com",
+    databaseURL: "https://chronoroadmap-default-rtdb.firebaseio.com",
+    projectId: "chronoroadmap",
+    storageBucket: "chronoroadmap.firebasestorage.app",
+    messagingSenderId: "687990224660",
+    appId: "1:687990224660:web:70c88600b9e51a3967b401"
   };
 
-  // 1. Собираем все задачи
-  roles.forEach(role => {
-    (tasks[role.key] || []).forEach(t => {
-      total++;
-      if (t.status === 'done') done++;
-      if (t.status === 'active') active++;
-      
-      allTasksFlattened.push({
-        ...t,
-        roleKey: role.key,
-        roleCls: role.cls
-      });
-    });
-  });
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
 
-  // 2. Сортируем задачи
-  allTasksFlattened.sort((a, b) => {
-    const parseDateStr = (str) => {
-      if (!str || typeof str !== 'string') return 0;
-      
-      // Ищем первое вхождение числа и месяца (например, "16 апр")
-      const parts = str.toLowerCase().match(/(\d+)\s+([а-я]+)/);
-      if (!parts) return 9999; // Если даты нет (буфер), кидаем в конец
-
-      const day = parseInt(parts[1]);
-      const monthStr = parts[2].substring(0, 3); // берем первые 3 буквы месяца
-      const month = monthMap[monthStr] !== undefined ? monthMap[monthStr] : 0;
-
-      // Создаем условный вес даты: Месяц * 100 + День (чтобы май был больше апреля)
-      return (month * 100) + day;
-    };
-
-    return parseDateStr(a.date) - parseDateStr(b.date);
-  });
-
-  // 3. Отрисовываем
-  allTasksFlattened.forEach(t => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="ov-role ${t.roleCls}">${ROLE_LABELS[t.roleKey]}</span></td>
-      <td style="font-size:0.85rem;color:var(--muted);white-space:nowrap">${t.date}</td>
-      <td style="font-family:'Montserrat',sans-serif;font-weight:600;font-size:0.9rem">${t.title}</td>
-      <td><span class="ov-status ${t.status}">${STATUS_ICONS[t.status]} ${STATUS_LABELS[t.status]}</span></td>
-      <td style="color:var(--muted);font-size:0.85rem;white-space:nowrap">${t.days}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // Обновление статистики
-  const planned = total - done - active;
-  const statsRow = document.getElementById('stats-row');
-  if (statsRow) {
-      statsRow.innerHTML = `
-        <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Всего задач</div></div>
-        <div class="stat-card"><div class="stat-num yellow">${active}</div><div class="stat-label">В работе</div></div>
-        <div class="stat-card"><div class="stat-num green">${done}</div><div class="stat-label">Реализовано</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--muted)">${planned}</div><div class="stat-label">Запланировано</div></div>
-      `;
+  // ── Helpers ──────────────────────────────────────────────────
+  /**
+   * Firebase хранит массивы как объекты {0: …, 1: …, 2: …} или как
+   * реальные массивы в зависимости от клиента, которым данные записывались.
+   * Эта функция всегда возвращает обычный JS-массив.
+   */
+  function toArray(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    // объект с числовыми ключами → массив, сохраняя порядок
+    return Object.keys(val)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(k => val[k]);
   }
 
-  const pct = total > 0 ? Math.round(done / total * 100) : 0;
-  document.getElementById('main-progress').style.width = pct + '%';
-  document.getElementById('progress-label').textContent = `${done} из ${total} задач завершено — ${pct}%`;
-}// ============================================================
-//  RENDER IMPROVEMENTS
-// ============================================================
-function buildImprovements(improvements) {
-  const grid = document.getElementById('improv-grid');
-  grid.innerHTML = '';
-  improvements.forEach(cat => {
-    const items = cat.items.map(it => `<div class="improv-item">${it}</div>`).join('');
-    const card = document.createElement('div');
-    card.className = 'improv-card';
-    card.innerHTML = `
-      <div class="improv-head">
-        <div class="improv-icon">${cat.icon}</div>
-        <div class="improv-head-title">${cat.title}</div>
-      </div>
-      <div class="improv-body">${items}</div>
+  // ── Load data from Firebase ───────────────────────────────────
+  async function loadData() {
+    try {
+      const snapshot = await get(ref(db, '/'));
+      if (!snapshot.exists()) throw new Error('База данных пуста или недоступна');
+
+      const raw = snapshot.val();
+
+      const data = {
+        meta:         raw.meta         || {},
+        roles:        toArray(raw.roles),
+        improvements: toArray(raw.improvements),
+        tasks: {}
+      };
+
+      if (raw.tasks) {
+        for (const key of Object.keys(raw.tasks)) {
+          const arr = toArray(raw.tasks[key]);
+          data.tasks[key] = arr.map(task => ({
+            ...task,
+            items: toArray(task.items)
+          }));
+        }
+      }
+
+      return data;
+    } catch (err) {
+      showError(err.message);
+      return null;
+    }
+  }
+
+  // ── Error display ─────────────────────────────────────────────
+  function showError(msg) {
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('error-msg');
+    el.style.display = 'block';
+    el.innerHTML = `
+      ⚠️ Не удалось загрузить данные из Firebase<br>
+      <code>${msg}</code><br><br>
+      Проверьте правила доступа Firebase и наличие данных в базе.
     `;
-    grid.appendChild(card);
+  }
+
+  // ── Render meta ───────────────────────────────────────────────
+  function renderMeta(meta) {
+    document.title = `${meta.project || 'Roadmap'} — Улучшения`;
+    document.getElementById('logo-project').textContent = 'Проект: ' + (meta.project || '');
+    document.getElementById('hero-start').textContent   = meta.startDate || '';
+  }
+
+  // ── Render pipeline ───────────────────────────────────────────
+  const STATUS_LABELS = {
+    planned: 'Запланировано',
+    active:  'В работе',
+    done:    'Реализовано',
+    blocked: 'Заблокировано',
+    waiting: 'Ожидание'
+  };
+  const STATUS_ICONS = {
+    planned: '○', active: '◉', done: '✓', blocked: '✕', waiting: '⏳'
+  };
+  const ROLE_LABELS = {
+    art:  '🎨 Художник',
+    anim: '✨ Аниматор',
+    prog: '💻 Программист'
+  };
+
+  function buildPipeline(containerId, tasks) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    tasks.forEach((t, i) => {
+      if (i > 0) {
+        const arrow = document.createElement('div');
+        arrow.className = 'arrow-connector';
+        arrow.innerHTML = '<div class="arrow-line"></div><div class="arrow-head"></div>';
+        container.appendChild(arrow);
+      }
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      card.setAttribute('data-status', t.status || 'planned');
+
+      const dotHtml = t.status === 'active' ? '<span class="dot"></span>' : '';
+      const formattedTransfer = t.transfer ? t.transfer.replace(/\n/g, '<br>') : '';
+      const transferHtml = formattedTransfer
+        ? `<div class="card-transfer">${formattedTransfer}</div>`
+        : '';
+      const itemsHtml = (t.items || []).map(it => `<li>${it}</li>`).join('');
+
+      card.innerHTML = `
+        <div class="status-badge ${t.status || 'planned'}">${dotHtml}${STATUS_ICONS[t.status] || '○'} ${STATUS_LABELS[t.status] || t.status}</div>
+        <div class="card-date">
+          <span>${t.date || ''}</span>
+          <span class="card-date-days">${t.days || ''}</span>
+        </div>
+        <div class="card-title">${t.title || ''}</div>
+        <ul class="card-items">${itemsHtml}</ul>
+        ${transferHtml}
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // ── Render overview ───────────────────────────────────────────
+  function buildOverview(roles, tasks) {
+    const tbody = document.getElementById('overview-tbody');
+    tbody.innerHTML = '';
+
+    const monthMap = {
+      'янв':0,'фев':1,'мар':2,'апр':3,'мая':4,'июн':5,
+      'июл':6,'авг':7,'сен':8,'окт':9,'ноя':10,'дек':11
+    };
+
+    let total = 0, done = 0, active = 0;
+    let allTasks = [];
+
+    roles.forEach(role => {
+      (tasks[role.key] || []).forEach(t => {
+        total++;
+        if (t.status === 'done')   done++;
+        if (t.status === 'active') active++;
+        allTasks.push({ ...t, roleKey: role.key, roleCls: role.cls });
+      });
+    });
+
+    allTasks.sort((a, b) => {
+      const parse = (str) => {
+        if (!str) return 9999;
+        const m = str.toLowerCase().match(/(\d+)\s+([а-я]+)/);
+        if (!m) return 9999;
+        const day   = parseInt(m[1]);
+        const month = monthMap[m[2].substring(0,3)] ?? 0;
+        return month * 100 + day;
+      };
+      return parse(a.date) - parse(b.date);
+    });
+
+    allTasks.forEach(t => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="ov-role ${t.roleCls}">${ROLE_LABELS[t.roleKey] || t.roleKey}</span></td>
+        <td style="font-size:0.85rem;color:var(--muted);white-space:nowrap">${t.date || ''}</td>
+        <td style="font-family:'Montserrat',sans-serif;font-weight:600;font-size:0.9rem">${t.title || ''}</td>
+        <td><span class="ov-status ${t.status || 'planned'}">${STATUS_ICONS[t.status] || '○'} ${STATUS_LABELS[t.status] || t.status}</span></td>
+        <td style="color:var(--muted);font-size:0.85rem;white-space:nowrap">${t.days || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const statsRow = document.getElementById('stats-row');
+    const planned  = total - done - active;
+    statsRow.innerHTML = `
+      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Всего задач</div></div>
+      <div class="stat-card"><div class="stat-num yellow">${active}</div><div class="stat-label">В работе</div></div>
+      <div class="stat-card"><div class="stat-num green">${done}</div><div class="stat-label">Реализовано</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--muted)">${planned}</div><div class="stat-label">Запланировано</div></div>
+    `;
+
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    document.getElementById('main-progress').style.width  = pct + '%';
+    document.getElementById('progress-label').textContent = `${done} из ${total} задач завершено — ${pct}%`;
+  }
+
+  // ── Render improvements ───────────────────────────────────────
+  function buildImprovements(improvements) {
+    const grid = document.getElementById('improv-grid');
+    grid.innerHTML = '';
+    improvements.forEach(cat => {
+      const items = (cat.items || []).map(it => `<div class="improv-item">${it}</div>`).join('');
+      const card  = document.createElement('div');
+      card.className = 'improv-card';
+      card.innerHTML = `
+        <div class="improv-head">
+          <div class="improv-icon">${cat.icon || ''}</div>
+          <div class="improv-head-title">${cat.title || ''}</div>
+        </div>
+        <div class="improv-body">${items}</div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  (async () => {
+    const data = await loadData();
+    if (!data) return;
+
+    renderMeta(data.meta);
+
+    data.roles.forEach(role => {
+      buildPipeline(role.pipelineId, data.tasks[role.key] || []);
+    });
+
+    buildOverview(data.roles, data.tasks);
+    buildImprovements(data.improvements || []);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display     = 'block';
+  })();
+</script>
+
+<!-- ── Non-module UI logic (tab switching, mobile menu) ──────── -->
+<script>
+  function showTab(name) {
+    ['overview','art','anim','prog','improv'].forEach(t => {
+      document.getElementById('tab-' + t).classList.add('hidden');
+    });
+    document.getElementById('tab-' + name).classList.remove('hidden');
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+      const oc = btn.getAttribute('onclick') || '';
+      if (oc.includes("'" + name + "'")) btn.classList.add('active');
+    });
+  }
+
+  function closeMobile() {
+    document.getElementById('mobileNav').classList.remove('open');
+  }
+
+  document.getElementById('mobileMenu').addEventListener('click', () => {
+    document.getElementById('mobileNav').classList.toggle('open');
   });
-}
 
-// ============================================================
-//  TAB SWITCHING
-// ============================================================
-function showTab(name) {
-  ['overview','art','anim','prog','improv'].forEach(t => {
-    document.getElementById('tab-' + t).classList.add('hidden');
+  window.addEventListener('scroll', () => {
+    document.querySelector('header').style.boxShadow = window.scrollY > 80
+      ? '0 2px 20px rgba(255,0,0,0.3)'
+      : '0 2px 10px rgba(0,0,0,0.5)';
   });
-  document.getElementById('tab-' + name).classList.remove('hidden');
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-    const oc = btn.getAttribute('onclick') || '';
-    if (oc.includes("'" + name + "'")) btn.classList.add('active');
-  });
-}
-
-// ============================================================
-//  MOBILE MENU
-// ============================================================
-function closeMobile() {
-  document.getElementById('mobileNav').classList.remove('open');
-}
-document.getElementById('mobileMenu').addEventListener('click', () => {
-  document.getElementById('mobileNav').classList.toggle('open');
-});
-
-// Scroll shadow (как в Index.html)
-window.addEventListener('scroll', () => {
-  document.querySelector('header').style.boxShadow = window.scrollY > 80
-    ? '0 2px 20px rgba(255,0,0,0.3)'
-    : '0 2px 10px rgba(0,0,0,0.5)';
-});
-
-// ============================================================
-//  INIT
-// ============================================================
-(async () => {
-  const data = await loadData();
-  if (!data) return;
-
-  renderMeta(data.meta);
-
-  data.roles.forEach(role => {
-    buildPipeline(role.pipelineId, data.tasks[role.key] || []);
-  });
-
-  buildOverview(data.roles, data.tasks);
-  buildImprovements(data.improvements || []);
-
-  // Hide loader, show app
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-})();
 </script>
 </body>
 </html>
